@@ -73,7 +73,7 @@ public:
     virtual bool Delete(const std::string &key) = 0;
 
     /**
-     * Retrive key for the given value
+     * Retrive key for the given value (lol wat?)
      * If there is an association for the given key then method copies value
      * into given output parameter (possibly extends its size) and return true
      *
