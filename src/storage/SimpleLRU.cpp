@@ -1,4 +1,5 @@
 #include "SimpleLRU.h"
+#include <iostream>
 
 namespace Afina {
 namespace Backend {
@@ -8,26 +9,31 @@ bool SimpleLRU::Put(const std::string &key, const std::string &value) {
     std::size_t add_val_size = value.size();
     std::size_t add_size = add_val_size + key.size();
     
-    auto element = this->_lru_index.find(key);
+    auto element = _lru_index.find(key);
     
     if (element != this->_lru_index.end()) { // key exists, override
-        std::size_t old_val_size = element->second.value.size();
+        lru_node& node = element->second;
+        std::size_t old_val_size = node.value.size();
         
         if (this->_act_size - old_val_size + add_val_size <= this->_max_size) { // value size is ok
-            element->second.value = value;
-            element->second.prev->next = element->second.next;
-            element->second.next->prev = std::move(element->second.prev);
-            this->_lru_head->next = &element;
-            element->second.prev = std::move(this->_lru_head);
-            std::unique_ptr<lru_node> el_ptr(element);
-            this->_lru_head = std::move(el_ptr);
-            this->act_size -= old_val_size;
-            this->act_size += add_val_size;
+            node.value = value;
+            this->_lru_head->next = &node;
+            if (node.prev != nullptr) {
+                node.prev->next = node.next;
+                node.next->prev.swap(node.prev);
+            }
+            else {
+                node.prev = std::move(node.next->prev);
+                node.next->prev = nullptr;
+            }
+            this->_lru_head.swap(node.prev);
+            this->_act_size -= old_val_size;
+            this->_act_size += add_val_size;
             
             return true;
         }
         else { // value is too big
-            if (add_size > this->max_size) { // value is really big
+            if (add_size > this->_max_size) { // value is really big
                 return false;
             }
             else { // we can afford this
@@ -39,24 +45,28 @@ bool SimpleLRU::Put(const std::string &key, const std::string &value) {
                     std::unique_ptr<lru_node> new_head(new lru_node);
                     new_head->key = key;
                     new_head->value = value;
-                    new_head->next = &new_head;
+                    new_head->next = new_head.get();
                     new_head->prev = nullptr;
                     this->_lru_head = std::move(new_head);
-                    this->act_size = add_size;
+                    this->_act_size = add_size;
                     this->_lru_index.emplace(key, *(this->_lru_head));
                     
                     return true;
                 }
-                else { // we still have our element
-                    element->second.value = value;
-                    element->second.prev->next = element->second.next;
-                    element->second.next->prev = std::move(element->second.prev);
-                    this->_lru_head->next = &element;
-                    element->second.prev = std::move(this->_lru_head);
-                    std::unique_ptr<lru_node> el_ptr(element);
-                    this->_lru_head = std::move(el_ptr);
-                    this->act_size -= old_val_size;
-                    this->act_size += add_val_size;
+                else { // we still have our node
+                    node.value = value;
+                    this->_lru_head->next = &node;
+                    if (node.prev != nullptr) {
+                        node.prev->next = node.next;
+                        node.next->prev.swap(node.prev);
+                    }
+                    else {
+                        node.prev = std::move(node.next->prev);
+                        node.next->prev = nullptr;
+                    }
+                    this->_lru_head.swap(node.prev);
+                    this->_act_size -= old_val_size;
+                    this->_act_size += add_val_size;
             
                     return true;
                 }
@@ -65,20 +75,35 @@ bool SimpleLRU::Put(const std::string &key, const std::string &value) {
     }
     else { // writing new key
         if (this->_act_size + add_size <= this->_max_size) { // key + value size is ok
-            std::unique_ptr<lru_node> new_head(new lru_node);
-            new_head->key = key;
-            new_head->value = value;
-            new_head->next = this->_lru_head->next;
-            this->_lru_head->next = &(*new_head);
-            new_head->prev = std::move(this->_lru_head);
-            this->_lru_head = std::move(new_head);
-            this->act_size += add_size;
-            this->_lru_index.emplace(key, *(this->_lru_head));
-            
-            return true;
+            if (!this->_lru_index.empty()) { // index is not empty
+                std::unique_ptr<lru_node> new_head(new lru_node);
+                new_head->key = key;
+                new_head->value = value;
+                new_head->next = this->_lru_head->next;
+                this->_lru_head->next = &(*new_head);
+                new_head->prev = std::move(this->_lru_head);
+                this->_lru_head = std::move(new_head);
+                this->_act_size += add_size;
+                this->_lru_index.emplace(key, *(this->_lru_head));
+                
+                return true;
+            }
+            else {
+                std::unique_ptr<lru_node> new_head(new lru_node);
+                new_head->key = key;
+                new_head->value = value;
+                new_head->next = new_head.get();
+                new_head->prev = nullptr;
+                this->_lru_head = std::move(new_head);
+                this->_act_size = add_size;
+                this->_lru_index.emplace(key, *(this->_lru_head));
+                
+                return true;
+            }
         }
         else { // key + value too big
-            if (add_size > this->max_size) { // key + value really BIG
+            printf("Writing new key, we are at the bottleneck\n");
+            if (add_size > this->_max_size) { // key + value really BIG
                 return false;
             }
             else { // we can afford this
@@ -90,10 +115,10 @@ bool SimpleLRU::Put(const std::string &key, const std::string &value) {
                     std::unique_ptr<lru_node> new_head(new lru_node);
                     new_head->key = key;
                     new_head->value = value;
-                    new_head->next = &new_head;
+                    new_head->next = new_head.get();
                     new_head->prev = nullptr;
                     this->_lru_head = std::move(new_head);
-                    this->act_size = add_size;
+                    this->_act_size = add_size;
                     this->_lru_index.emplace(key, *(this->_lru_head));
                     
                     return true;
@@ -106,7 +131,7 @@ bool SimpleLRU::Put(const std::string &key, const std::string &value) {
                     this->_lru_head->next = &(*new_head);
                     new_head->prev = std::move(this->_lru_head);
                     this->_lru_head = std::move(new_head);
-                    this->act_size += add_size;
+                    this->_act_size += add_size;
                     this->_lru_index.emplace(key, *(this->_lru_head));
                     
                     return true;
@@ -135,7 +160,7 @@ bool SimpleLRU::PutIfAbsent(const std::string &key, const std::string &value) {
             this->_lru_head->next = &(*new_head);
             new_head->prev = std::move(this->_lru_head);
             this->_lru_head = std::move(new_head);
-            this->act_size += add_size;
+            this->_act_size += add_size;
             this->_lru_index.emplace(key, *(this->_lru_head));
             
             return true;
@@ -153,10 +178,10 @@ bool SimpleLRU::PutIfAbsent(const std::string &key, const std::string &value) {
                     std::unique_ptr<lru_node> new_head(new lru_node);
                     new_head->key = key;
                     new_head->value = value;
-                    new_head->next = &new_head;
+                    new_head->next = new_head.get();
                     new_head->prev = nullptr;
                     this->_lru_head = std::move(new_head);
-                    this->act_size = add_size;
+                    this->_act_size = add_size;
                     this->_lru_index.emplace(key, *(this->_lru_head));
                     
                     return true;
@@ -169,12 +194,13 @@ bool SimpleLRU::PutIfAbsent(const std::string &key, const std::string &value) {
                     this->_lru_head->next = &(*new_head);
                     new_head->prev = std::move(this->_lru_head);
                     this->_lru_head = std::move(new_head);
-                    this->act_size += add_size;
+                    this->_act_size += add_size;
                     this->_lru_index.emplace(key, *(this->_lru_head));
                     
                     return true;
                 }
             }
+        }
     }
 }
 
@@ -186,23 +212,28 @@ bool SimpleLRU::Set(const std::string &key, const std::string &value) {
     auto element = this->_lru_index.find(key);
     
     if (element != this->_lru_index.end()) { // key exists, adding
-        std::size_t old_val_size = element->second.value.size();
+        lru_node& node = element->second;
+        std::size_t old_val_size = node.value.size();
         
         if (this->_act_size - old_val_size + add_val_size <= this->_max_size) {
-            element->second.value = value;
-            element->second.prev->next = element->second.next;
-            element->second.next->prev = std::move(element->second.prev);
-            this->_lru_head->next = &element;
-            element->second.prev = std::move(this->_lru_head);
-            std::unique_ptr<lru_node> el_ptr(element);
-            this->_lru_head = std::move(el_ptr);
-            this->act_size -= old_val_size;
-            this->act_size += add_val_size;
+            node.value = value;
+            this->_lru_head->next = &node;
+            if (node.prev != nullptr) {
+                node.prev->next = node.next;
+                node.next->prev.swap(node.prev);
+            }
+            else {
+                node.prev = std::move(node.next->prev);
+                node.next->prev = nullptr;
+            }
+            this->_lru_head.swap(node.prev);
+            this->_act_size -= old_val_size;
+            this->_act_size += add_val_size;
             
             return true;
         }
         else { // value is too big
-            if (add_size > this->max_size) { // value is really big
+            if (add_size > this->_max_size) { // value is really big
                 return false;
             }
             else { // we can afford this
@@ -214,24 +245,28 @@ bool SimpleLRU::Set(const std::string &key, const std::string &value) {
                     std::unique_ptr<lru_node> new_head(new lru_node);
                     new_head->key = key;
                     new_head->value = value;
-                    new_head->next = &new_head;
+                    new_head->next = new_head.get();
                     new_head->prev = nullptr;
                     this->_lru_head = std::move(new_head);
-                    this->act_size = add_size;
+                    this->_act_size = add_size;
                     this->_lru_index.emplace(key, *(this->_lru_head));
                     
                     return true;
                 }
-                else { // we still have our element
-                    element->second.value = value;
-                    element->second.prev->next = element->second.next;
-                    element->second.next->prev = std::move(element->second.prev);
-                    this->_lru_head->next = &element;
-                    element->second.prev = std::move(this->_lru_head);
-                    std::unique_ptr<lru_node> el_ptr(element);
-                    this->_lru_head = std::move(el_ptr);
-                    this->act_size -= old_val_size;
-                    this->act_size += add_val_size;
+                else { // we still have our node
+                    node.value = value;
+                    this->_lru_head->next = &node;
+                    if (node.prev != nullptr) {
+                        node.prev->next = node.next;
+                        node.next->prev.swap(node.prev);
+                    }
+                    else {
+                        node.prev = std::move(node.next->prev);
+                        node.next->prev = nullptr;
+                    }
+                    this->_lru_head.swap(node.prev);
+                    this->_act_size -= old_val_size;
+                    this->_act_size += add_val_size;
             
                     return true;
                 }
@@ -246,18 +281,19 @@ bool SimpleLRU::Set(const std::string &key, const std::string &value) {
 // See MapBasedGlobalLockImpl.h
 bool SimpleLRU::Delete(const std::string &key) {
     auto element = this->_lru_index.find(key);
-    
+    return false;
     if (element != this->_lru_index.end()) { // key present
-        std::size_t el_size = element->second.key.size() + element->second.value.size();
-        element->second.prev->next = element->second.next;
-        if (element->second.next->prev == nullptr){ // if we deleting head
-            this->_lru_head = std::move(element->second.prev);
+        lru_node& node = element->second;
+        std::size_t el_size = node.key.size() + node.value.size();
+        node.prev->next = node.next;
+        if (node.next->prev == nullptr){ // if we deleting head
+            this->_lru_head = std::move(node.prev);
         }
         else { // if we deleting regular node
-            element->second.next->prev = std::move(element->second.prev);
+            node.next->prev = std::move(node.prev);
         }
         this->_lru_index.erase(key);
-        this->act_size -= el_size;
+        this->_act_size -= el_size;
         
         return true;
     }
@@ -267,18 +303,12 @@ bool SimpleLRU::Delete(const std::string &key) {
 }
 
 // See MapBasedGlobalLockImpl.h
-bool SimpleLRU::Get(const std::string &key, std::string &value) const {
+bool SimpleLRU::Get(const std::string &key, std::string &value) const { // const?
     auto element = this->_lru_index.find(key);
-    
     if (element != this->_lru_index.end()) { // key present
-        value = element->second.value;
-        element->second.prev->next = element->second.next;
-        element->second.next->prev = std::move(element->second.prev);
-        this->_lru_head->next = &element;
-        element->second.prev = std::move(this->_lru_head);
-        std::unique_ptr<lru_node> el_ptr(element);
-        this->_lru_head = std::move(el_ptr);
-        
+        lru_node& node = element->second;
+        value = node.value;
+               
         return true;
     }
     else { // key not found

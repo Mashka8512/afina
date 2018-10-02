@@ -52,6 +52,9 @@ private:
 
     // Thread to run network on
     std::thread _thread;
+    
+    std::size_t _max_workers = 100;
+    std::vector<pthread_t> workers;
 };
 
 } // namespace MTblocking
