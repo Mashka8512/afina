@@ -6,6 +6,8 @@
 
 #include <afina/network/Server.h>
 
+#include "Worker.h"
+
 namespace spdlog {
 class logger;
 }
@@ -54,7 +56,10 @@ private:
     std::thread _thread;
     
     std::size_t _max_workers = 100;
-    std::vector<pthread_t> workers;
+    int _wid = 0;
+    std::vector<std::unique_ptr<Worker>> _workers;
+    std::mutex _workers_mutex;
+    std::condition_variable _serv_lock;
 };
 
 } // namespace MTblocking

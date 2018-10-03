@@ -22,6 +22,7 @@
 #include <afina/logging/Service.h>
 
 #include "protocol/Parser.h"
+#include "Worker.h"
 
 namespace Afina {
 namespace Network {
@@ -123,7 +124,7 @@ void ServerImpl::OnRun() {
             }
             _logger->debug("Accepted connection on descriptor {} (host={}, port={})\n", client_socket, host, port);
         }
-
+        
         // Configure read timeout
         {
             struct timeval tv;
@@ -131,21 +132,27 @@ void ServerImpl::OnRun() {
             tv.tv_usec = 0;
             setsockopt(client_socket, SOL_SOCKET, SO_RCVTIMEO, (const char *)&tv, sizeof tv);
         }
-
+        
         // TODO: Start new thread and process data from/to connection
         {
-            //static const std::string msg = "TODO: start new thread and process memcached protocol instead";
-            if ()
-            pthread_t worker_id;
-            pthread_create();
-            if (send(client_socket, msg.data(), msg.size(), 0) <= 0) {
-                _logger->error("Failed to write response to client: {}", strerror(errno));
+            std::unique_ptr<Worker> new_worker(new Worker(pStorage, pLogging, _workers, _workers_mutex, _serv_lock));
+            if (_workers.size() < _max_workers) { // we can create new connection
+                std::unique_lock<std::mutex> lc(_workers_mutex);
+                new_worker->Start(_wid, client_socket, client_addr);
+                _workers.push_back(std::move(new_worker));
+                _wid++;
             }
-            close(client_socket);
+            else { // no room, sorry
+                close(client_socket);
+            }
         }
     }
 
     // Cleanup on exit...
+    std::unique_lock<std::mutex> lc(_workers_mutex);
+    while (!_workers.empty()) {
+        _serv_lock.wait(lc);
+    }
     _logger->warn("Network stopped");
 }
 
