@@ -52,6 +52,13 @@ private:
 
     // Thread to run network on
     std::thread _thread;
+
+    std::mutex mutex_w;
+    std::unordered_map<int, std::thread> workers;
+    uint32_t max_workers;
+    std::condition_variable workers_cv;
+
+    void Connection(int client_socket);
 };
 
 } // namespace MTblocking
