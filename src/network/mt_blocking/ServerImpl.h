@@ -15,6 +15,7 @@ class logger;
 namespace Afina {
 namespace Network {
 namespace MTblocking {
+
 /**
  * # Network resource manager implementation
  * Server that is spawning a separate thread for each connection
@@ -56,9 +57,6 @@ private:
     
     std::size_t _max_workers = 100;
     int _wid = 0;
-    std::vector<std::unique_ptr<Worker>> _workers;
-    std::mutex _workers_mutex;
-    std::condition_variable _serv_lock;
 };
 
 } // namespace MTblocking

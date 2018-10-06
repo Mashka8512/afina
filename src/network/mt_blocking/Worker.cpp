@@ -15,8 +15,8 @@ namespace Afina {
 namespace Network {
 namespace MTblocking {
 
-Worker::Worker(std::shared_ptr<Afina::Storage> ps, std::shared_ptr<Afina::Logging::Service> pl, std::vector<std::unique_ptr<Worker>> *workers, std::mutex *workers_mutex, std::condition_variable *serv_lock)
-    : _pStorage(ps), _pLogging(pl), isRunning(false), _worker_id(-1), _workers(workers), _workers_mutex(workers_mutex), _serv_lock(serv_lock) {}
+Worker::Worker(std::shared_ptr<Afina::Storage> ps, std::shared_ptr<Afina::Logging::Service> pl)
+    : _pStorage(ps), _pLogging(pl), isRunning(false), _worker_id(-1) {}
 
 Worker::~Worker() {}
 
@@ -47,13 +47,13 @@ void Worker::Start(int worker_id, int client_socket, struct sockaddr& client_add
 }
 
 void Worker::Stop() {
-    auto it = find_if(_workers->begin(), _workers->end(), [&](unique_ptr<Worker>& obj){return obj->id() == _worker_id;});
-    assert(it != _workers->end()); // if not, we are at the *woops* situation
+    auto it = find_if(_workers.begin(), _workers.end(), [&](unique_ptr<Worker>& obj){return obj->id() == _worker_id;});
+    assert(it != _workers.end()); // if not, we are at the *woops* situation
     { // erasing myself
-        std::unique_lock<std::mutex> lc(*_workers_mutex);
-        _workers->erase(it);
+        std::unique_lock<std::mutex> lc(_workers_mutex);
+        _workers.erase(it);
     }
-    _serv_lock->notify_all();
+    _serv_lock.notify_all();
     isRunning.exchange(false);
 }
 
@@ -79,7 +79,7 @@ void Worker::OnRun() {
         try {
             int readed_bytes = -1;
             char client_buffer[4096];
-            while ((readed_bytes = read(client_socket, client_buffer, sizeof(client_buffer))) > 0) {
+            while ((readed_bytes = read(_client_socket, client_buffer, sizeof(client_buffer))) > 0) {
                 _logger->debug("Got {} bytes from socket", readed_bytes);
 
                 // Single block of data readed from the socket could trigger inside actions a multiple times,
@@ -131,7 +131,7 @@ void Worker::OnRun() {
                         command_to_execute->Execute(*pStorage, argument_for_command, result);
 
                         // Send response
-                        if (send(client_socket, result.data(), result.size(), 0) <= 0) {
+                        if (send(_client_socket, result.data(), result.size(), 0) <= 0) {
                             throw std::runtime_error("Failed to send response");
                         }
 
@@ -149,11 +149,11 @@ void Worker::OnRun() {
                 throw std::runtime_error(std::string(strerror(errno)));
             }
         } catch (std::runtime_error &ex) {
-            _logger->error("Failed to process connection on descriptor {}: {}", client_socket, ex.what());
+            _logger->error("Failed to process connection on descriptor {}: {}", _client_socket, ex.what());
         }
 
         // We are done with this connection
-        close(client_socket);
+        close(_client_socket);
     }
     
     Stop();

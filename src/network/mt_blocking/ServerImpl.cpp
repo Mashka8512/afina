@@ -28,8 +28,13 @@
 namespace Afina {
 namespace Network {
 namespace MTblocking {
-Worker::Worker(std::shared_ptr<Afina::Storage> ps, std::shared_ptr<Afina::Logging::Service> pl, std::vector<std::unique_ptr<Worker>> *workers, std::mutex *workers_mutex, std::condition_variable *serv_lock)
-    : _pStorage(ps), _pLogging(pl), isRunning(false), _worker_id(-1), _workers(workers), _workers_mutex(workers_mutex), _serv_lock(serv_lock) {}
+
+std::vector<std::unique_ptr<Worker>> _workers;
+std::mutex _workers_mutex;
+std::condition_variable _serv_lock;
+
+Worker::Worker(std::shared_ptr<Afina::Storage> ps, std::shared_ptr<Afina::Logging::Service> pl)
+    : _pStorage(ps), _pLogging(pl), isRunning(false), _worker_id(-1) {}
 
 Worker::~Worker() {}
 
@@ -60,13 +65,13 @@ void Worker::Start(int worker_id, int client_socket, struct sockaddr& client_add
 }
 
 void Worker::Stop() {
-    auto it = std::find_if(_workers->begin(), _workers->end(), [&](std::unique_ptr<Worker>& obj){return obj->id() == _worker_id;});
-    assert(it != _workers->end()); // if not, we are at the *woops* situation
+    auto it = std::find_if(_workers.begin(), _workers.end(), [&](std::unique_ptr<Worker>& obj){return obj->id() == _worker_id;});
+    assert(it != _workers.end()); // if not, we are at the *woops* situation
     { // erasing myself
-        std::unique_lock<std::mutex> lc(*_workers_mutex);
-        _workers->erase(it);
+        std::unique_lock<std::mutex> lc(_workers_mutex);
+        _workers.erase(it);
     }
-    _serv_lock->notify_all();
+    _serv_lock.notify_all();
     isRunning.exchange(false);
 }
 
@@ -281,7 +286,7 @@ void ServerImpl::OnRun() {
         
         // TODO: Start new thread and process data from/to connection
         {
-            std::unique_ptr<Worker> new_worker(new Worker(pStorage, pLogging, &_workers, &_workers_mutex, &_serv_lock));
+            std::unique_ptr<Worker> new_worker(new Worker(pStorage, pLogging));
             if (_workers.size() < _max_workers) { // we can create new connection
                 std::unique_lock<std::mutex> lc(_workers_mutex);
                 new_worker->Start(_wid, client_socket, client_addr);
