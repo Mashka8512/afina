@@ -3,6 +3,9 @@
 
 #include <atomic>
 #include <thread>
+#include <mutex>
+#include <unordered_map>
+#include <condition_variable>
 
 #include <afina/network/Server.h>
 
