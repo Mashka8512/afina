@@ -15,7 +15,7 @@ namespace Afina {
 namespace Network {
 namespace MTblocking {
 
-Worker::Worker(std::shared_ptr<Afina::Storage> ps, std::shared_ptr<Afina::Logging::Service> pl, std::vector<std::unique_ptr<Worker>>& workers, std::mutex& workers_mutex, std::condition_variable& serv_lock)
+Worker::Worker(std::shared_ptr<Afina::Storage> ps, std::shared_ptr<Afina::Logging::Service> pl, std::vector<std::unique_ptr<Worker>> *workers, std::mutex *workers_mutex, std::condition_variable *serv_lock)
     : _pStorage(ps), _pLogging(pl), isRunning(false), _worker_id(-1), _workers(workers), _workers_mutex(workers_mutex), _serv_lock(serv_lock) {}
 
 Worker::~Worker() {}
@@ -47,13 +47,13 @@ void Worker::Start(int worker_id, int client_socket, struct sockaddr& client_add
 }
 
 void Worker::Stop() {
-    auto it = find_if(_workers.begin(), _workers.end(), [&](unique_ptr<Worker>& obj){return obj->id() == _worker_id;});
-    assert(it != _workers.end()); // if not, we are at the *woops* situation
+    auto it = find_if(_workers->begin(), _workers->end(), [&](unique_ptr<Worker>& obj){return obj->id() == _worker_id;});
+    assert(it != _workers->end()); // if not, we are at the *woops* situation
     { // erasing myself
-        std::unique_lock<std::mutex> lc(_workers_mutex);
-        _workers.erase(it);
+        std::unique_lock<std::mutex> lc(*_workers_mutex);
+        _workers->erase(it);
     }
-    _serv_lock.notify_all();
+    _serv_lock->notify_all();
     isRunning.exchange(false);
 }
 

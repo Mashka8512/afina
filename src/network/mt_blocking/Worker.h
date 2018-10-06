@@ -26,7 +26,7 @@ namespace MTblocking {
 
 class Worker {
 public:
-    Worker(std::shared_ptr<Afina::Storage> ps, std::shared_ptr<Afina::Logging::Service> pl, std::vector<std::unique_ptr<Worker>>& workers, std::mutex& workers_mutex, std::condition_variable& serv_lock);
+    Worker(std::shared_ptr<Afina::Storage> ps, std::shared_ptr<Afina::Logging::Service> pl, std::vector<std::unique_ptr<Worker>> *workers, std::mutex *workers_mutex, std::condition_variable *serv_lock);
     ~Worker();
 
     Worker(Worker &&);
@@ -63,13 +63,13 @@ private:
     
     int _client_socket;
     
-    struct sockaddr& _client_addr;
+    struct sockaddr _client_addr;
     
     socklen_t _client_addr_len;
     
-    std::vector<std::unique_ptr<Worker>>& _workers;
-    std::mutex& _workers_mutex;
-    std::condition_variable& _serv_lock;
+    std::vector<std::unique_ptr<Worker>> *_workers;
+    std::mutex *_workers_mutex;
+    std::condition_variable *_serv_lock;
 };
 
 } // namespace MTblocking
