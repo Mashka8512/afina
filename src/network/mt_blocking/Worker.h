@@ -26,7 +26,7 @@ namespace MTblocking {
 
 class Worker {
 public:
-    Worker(std::shared_ptr<Afina::Storage> ps, std::shared_ptr<Afina::Logging::Service> pl);
+    Worker(Afina::Storage *ps);
     ~Worker();
 
     Worker(Worker &&);
@@ -36,7 +36,7 @@ public:
 
     void Stop();
 
-    void Join();
+    void Detach();
     
     int id() {
         return _worker_id;
@@ -49,11 +49,7 @@ private:
     Worker(Worker &) = delete;
     Worker &operator=(Worker &) = delete;
 
-    std::shared_ptr<Afina::Storage> _pStorage;
-
-    std::shared_ptr<Afina::Logging::Service> _pLogging;
-
-    std::shared_ptr<spdlog::logger> _logger;
+    Afina::Storage *_pStorage;
 
     std::atomic<bool> isRunning;
 
