@@ -54,14 +54,15 @@ public:
 
     // see SimpleLRU.h
     bool Get(const std::string &key, std::string &value) const override {
-        // TODO: sinchronization?
+        // TODO: sinchronization
+        std::unique_lock<std::mutex> lock(lc);
         auto result = SimpleLRU::Get(key, value);
         return result;
     }
 
 private:
     // TODO: sinchronization primitives
-    std::mutex lc;
+    mutable std::mutex lc;
 };
 
 } // namespace Backend
