@@ -22,7 +22,13 @@ public:
 
     ~SimpleLRU() {
         _lru_index.clear();
-        _lru_head.reset(); // TODO: Here is stack overflow
+        tail = _lru_head->next;
+        while (tail != _lru_head.get()) { // deleting from tail to the head
+            tail->prev.reset()
+            tail = tail->next
+        }
+        tail->prev.reset()
+        _lru_head.reset()
     }
 
     // Implements Afina::Storage interface
@@ -41,6 +47,9 @@ public:
     bool Get(const std::string &key, std::string &value) const override;
 
 private:
+    void node_to_top(lru_node& node);
+    bool new_head(std::string& key, std::string& value, std::size_t add_size);
+    
     // LRU cache node
     using lru_node = struct lru_node {
         std::string key;

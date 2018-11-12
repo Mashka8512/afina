@@ -41,6 +41,11 @@ protected:
     void OnRun();
 
 private:
+    std::mutex _workers_mutex;
+    std::vector<std::unique_ptr<Worker>> _workers;
+
+    std::condition_variable _serv_lock;
+    
     // Logger instance
     std::shared_ptr<spdlog::logger> _logger;
 
