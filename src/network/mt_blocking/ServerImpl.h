@@ -8,6 +8,7 @@
 #include <condition_variable>
 
 #include <afina/network/Server.h>
+#include <afina/Executor.h>
 
 namespace spdlog {
 class logger;
@@ -62,6 +63,8 @@ private:
     std::condition_variable workers_cv;
 
     void Connection(int client_socket);
+
+    Executor _executor;
 };
 
 } // namespace MTblocking

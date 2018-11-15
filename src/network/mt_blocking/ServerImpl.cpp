@@ -132,7 +132,7 @@ void ServerImpl::OnRun() {
             setsockopt(client_socket, SOL_SOCKET, SO_RCVTIMEO, (const char *)&tv, sizeof tv);
         }
 
-        // TODO: Start new thread and process data from/to connection
+       /*  // TODO: Start new thread and process data from/to connection
         {
             std::lock_guard<std::mutex> lock(mutex_w);
             if(workers.size()<max_workers)
@@ -144,12 +144,18 @@ void ServerImpl::OnRun() {
                 close(client_socket);
             }
 
+        }*/
+        
+        bool if_exec = _executor.Execute(&ServerImpl::Connection, this, client_socket);
+        if (!if_exec) {
+            close(client_socket);
         }
     }
     std::unique_lock<std::mutex> lock(mutex_w);
         while(workers.size() != 0){
           workers_cv.wait(lock);
     }
+    
 
     // Cleanup on exit...
     _logger->warn("Network stopped");
