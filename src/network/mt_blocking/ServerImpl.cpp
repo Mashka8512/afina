@@ -152,7 +152,7 @@ void ServerImpl::OnRun() {
         }
     }
     std::unique_lock<std::mutex> lock(mutex_w);
-        while(workers.size() != 0){
+        while(!workers.empty()){
           workers_cv.wait(lock);
     }
     
