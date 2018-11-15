@@ -8,6 +8,14 @@
 #include <queue>
 #include <string>
 #include <thread>
+#include <spdlog/logger.h>
+#include <afina/logging/Service.h>
+
+
+namespace spdlog {
+class logger;
+}
+
 
 namespace Afina {
 
@@ -16,6 +24,8 @@ namespace Afina {
  */
 class Executor {
     enum class State {
+        kReady,
+        
         // Threadpool is fully operational, tasks could be added and get executed
         kRun,
 
@@ -27,8 +37,12 @@ class Executor {
         kStopped
     };
 
-    Executor(std::string name, int size);
+    Executor(std::string name, int low_watermark, int hight_watermark, int max_queue_size, int idle_time);
     ~Executor();
+
+    //create low_watermark of threads
+    void Start(std::shared_ptr<spdlog::logger> logger);
+     
 
     /**
      * Signal thread pool to stop, it will stop accepting new jobs and close threads just after each become
@@ -50,15 +64,22 @@ class Executor {
         auto exec = std::bind(std::forward<F>(func), std::forward<Types>(args)...);
 
         std::unique_lock<std::mutex> lock(this->mutex);
-        if (state != State::kRun) {
+        if (state != State::kRun || _tasks.size() >= _max_queue_size) {
+            _logger->warn("can't add task");
             return false;
         }
 
         // Enqueue new task
         tasks.push_back(exec);
+        
+        if (_free_threads == 0 && _threads.size() < _hight_watermark) {
+                _add_thread();
+        } 
         empty_condition.notify_one();
         return true;
     }
+
+    void set_logger();
 
 private:
     // No copy/move/assign allowed
@@ -83,20 +104,38 @@ private:
     std::condition_variable empty_condition;
 
     /**
+     * Conditional variable to wait finish all threads
+     */
+    std::condition_variable _cv_stopping;
+
+    /**
      * Vector of actual threads that perorm execution
      */
-    std::vector<std::thread> threads;
+    std::vector<std::thread> _threads;
 
     /**
      * Task queue
      */
-    std::deque<std::function<void()>> tasks;
+    std::deque<std::function<void()>> _tasks;
 
     /**
      * Flag to stop bg threads
      */
-    State state;
+    State _state;
+
+    const int _low_watermark;
+    const int _hight_watermark;
+    const int _max_queue_size;
+    const int _idle_time;
+    int _free_threads;
+    
+    std::shared_ptr<spdlog::logger> _logger;
+    
+    void _add_thread();
+    void _erase_thread();
 };
+
+void perform(Executor *executor);
 
 } // namespace Afina
 
