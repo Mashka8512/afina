@@ -28,7 +28,7 @@ void Connection::OnClose() {
 void Connection::DoRead() { 
     try {
             int readed_bytes_new = -1;
-            char client_buffer[4096];
+            
             while ((readed_bytes_new = read(client_socket, client_buffer, sizeof(client_buffer) - readed_bytes)) > 0) {
                 readed_bytes += readed_bytes_new;
                  _logger->debug("Got {} bytes from socket", readed_bytes);

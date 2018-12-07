@@ -45,6 +45,7 @@ private:
     std::unique_ptr<Execute::Command> command_to_execute;
     
     int readed_bytes = 0;
+    char client_buffer[4096];
     
     std::vector<std::string> _answers;
     int _position = 0;
