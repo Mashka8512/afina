@@ -125,7 +125,7 @@ void ServerImpl::OnRun() {
             }
             _logger->debug("Accepted connection on descriptor {} (host={}, port={})\n", client_socket, host, port);
         }
-        
+
         // Configure read timeout
         {
             struct timeval tv;
@@ -133,12 +133,12 @@ void ServerImpl::OnRun() {
             tv.tv_usec = 0;
             setsockopt(client_socket, SOL_SOCKET, SO_RCVTIMEO, (const char *)&tv, sizeof tv);
         }
-        
+
         // TODO: Start new thread and process data from/to connection
         {
             std::unique_ptr<Worker> new_worker(new Worker(pStorage.get()));
+            std::unique_lock<std::mutex> lc(_workers_mutex);
             if (_workers.size() < _max_workers) { // we can create new connection
-                std::unique_lock<std::mutex> lc(_workers_mutex);
                 new_worker->Start(_wid, client_socket, client_addr);
                 new_worker->Detach();
                 _workers.push_back(std::move(new_worker));
@@ -149,7 +149,7 @@ void ServerImpl::OnRun() {
             }
         }
     }
-    
+
     // Cleanup on exit...
     std::unique_lock<std::mutex> lc(_workers_mutex);
     while (!_workers.empty()) {
