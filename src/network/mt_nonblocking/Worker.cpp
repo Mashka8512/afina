@@ -21,14 +21,14 @@ namespace Network {
 namespace MTnonblock {
 
 // See Worker.h
-Worker::Worker(std::shared_ptr<Afina::Storage> ps, std::shared_ptr<Afina::Logging::Service> pl)
-    : _pStorage(ps), _pLogging(pl), isRunning(false), _epoll_fd(-1) {
-    // TODO: implementation here
+Worker::Worker(std::shared_ptr<Afina::Storage> ps, std::shared_ptr<Afina::Logging::Service> pl, std::shared_ptr<std::mutex> epoll_lock)
+    : _pStorage(ps), _pLogging(pl), isRunning(false), _epoll_fd_lock(epoll_lock), _epoll_fd(-1) {
+    // TODO: implementation here ?
 }
 
 // See Worker.h
 Worker::~Worker() {
-    // TODO: implementation here
+    // TODO: implementation here ?
 }
 
 // See Worker.h
@@ -109,6 +109,7 @@ void Worker::OnRun() {
             // Rearm connection
             if (pconn->isAlive()) {
                 pconn->_event.events |= EPOLLONESHOT;
+                std::unique_lock<std::mutex> lock(*_epoll_fd_lock);
                 if (epoll_ctl(_epoll_fd, EPOLL_CTL_MOD, pconn->_socket, &pconn->_event)) {
                     pconn->OnError();
                     delete pconn;
@@ -116,6 +117,7 @@ void Worker::OnRun() {
             }
             // Or delete closed one
             else {
+                std::unique_lock<std::mutex> lock(*_epoll_fd_lock);
                 if (epoll_ctl(_epoll_fd, EPOLL_CTL_DEL, pconn->_socket, &pconn->_event)) {
                     std::cerr << "Failed to delete connection!" << std::endl;
                 }

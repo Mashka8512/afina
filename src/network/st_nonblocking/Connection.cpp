@@ -123,7 +123,7 @@ void Connection::DoRead() {
 void Connection::DoWrite() {
     while (!results_to_write.empty()) {
         auto result = results_to_write.back();
-        if (send(client_socket, result.data(), result.size(), 0) <= 0) {
+        if (send(_socket, result.data(), result.size(), 0) <= 0) {
             throw std::runtime_error("Failed to send response");
         }
         results_to_write.pop_back();
