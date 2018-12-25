@@ -170,11 +170,6 @@ void ServerImpl::OnRun() {
                 if (epoll_ctl(epoll_descr, EPOLL_CTL_MOD, pc->_socket, &pc->_event)) {
                     _logger->error("Failed to change connection event mask");
                 }
-
-                close(pc->_socket);
-                pc->OnClose();
-
-                delete pc;
             }
         }
     }
