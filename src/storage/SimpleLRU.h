@@ -22,13 +22,13 @@ public:
 
     ~SimpleLRU() {
         _lru_index.clear();
-        tail = _lru_head->next;
+        auto tail = _lru_head->next;
         while (tail != _lru_head.get()) { // deleting from tail to the head
-            tail->prev.reset()
-            tail = tail->next
+            tail->prev.reset();
+            tail = tail->next;
         }
-        tail->prev.reset()
-        _lru_head.reset()
+        tail->prev.reset();
+        _lru_head.reset();
     }
 
     // Implements Afina::Storage interface
@@ -47,9 +47,6 @@ public:
     bool Get(const std::string &key, std::string &value) const override;
 
 private:
-    void node_to_top(lru_node& node);
-    bool new_head(std::string& key, std::string& value, std::size_t add_size);
-    
     // LRU cache node
     using lru_node = struct lru_node {
         std::string key;
@@ -57,6 +54,10 @@ private:
         std::unique_ptr<lru_node> prev;
         lru_node* next;
     };
+
+    void node_to_top(lru_node& node);
+    bool new_head(const std::string& key, const std::string& value, std::size_t add_size);
+    bool new_root(const std::string& key, const std::string& value, std::size_t add_size);
 
     // Maximum number of bytes could be stored in this cache.
     // i.e all (keys+values) must be less the _max_size

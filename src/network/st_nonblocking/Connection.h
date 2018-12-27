@@ -22,7 +22,15 @@ public:
         Dead
     };
 
-    Connection(int s) : _socket(s) {
+    struct Masks {
+        static const int read = EPOLLIN | EPOLLRDHUP | EPOLLERR;
+        static const int read_write = EPOLLIN | EPOLLRDHUP | EPOLLERR | EPOLLOUT;
+    };
+
+    Connection(int s, std::shared_ptr<Afina::Storage> ps, std::shared_ptr<Logging::Service> pl) :
+                _socket(s),
+                _storage(ps),
+                pLogging(pl) {
         std::memset(&_event, 0, sizeof(struct epoll_event));
         _event.data.ptr = this;
     }
@@ -34,7 +42,7 @@ public:
         return false;
     }
 
-    void Start(std::shared_ptr<Afina::Storage> ps);
+    void Start();
 
 protected:
     void OnError();
@@ -53,8 +61,11 @@ private:
     Protocol::Parser parser;
     std::string argument_for_command;
     std::unique_ptr<Execute::Command> command_to_execute;
-    std::shared_ptr<Afina::Storage> pStorage;
+    std::shared_ptr<Afina::Storage> _storage;
+    std::shared_ptr<Logging::Service> pLogging;
+    std::shared_ptr<spdlog::logger> _logger;
     std::vector<std::string> results_to_write;
+    int _position = 0;
 };
 
 } // namespace STnonblock

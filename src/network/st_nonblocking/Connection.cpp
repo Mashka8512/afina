@@ -28,29 +28,35 @@ namespace Network {
 namespace STnonblock {
 
 // See Connection.h
-void Connection::Start(std::shared_ptr<Afina::Storage> ps) {
+void Connection::Start() {
+    _logger = pLogging->select("network.connection");
+    _logger->info("Connection starts");
     state = State::Alive;
-    pStorate = ps;
     command_to_execute.reset();
     argument_for_command.resize(0);
     parser.Reset();
     results_to_write.clear();
+    _position = 0;
+    _events.event = Masks::read;
 }
 
 // See Connection.h
 void Connection::OnError() {
+    _logger->info("Connection error");
     this->state = State::Dead;
     results_to_write.clear();
 }
 
 // See Connection.h
 void Connection::OnClose() {
+    _logger->info("Connection closing");
     this->state = State::Dead;
     results_to_write.clear();
 }
 
 // See Connection.h
 void Connection::DoRead() {
+    _logger->info("Connection reading");
     try {
         int read_bytes = -1;
         char client_buffer[4096];
@@ -106,7 +112,7 @@ void Connection::DoRead() {
                     argument_for_command.resize(0);
                     parser.Reset();
 
-                    _event.events = EPOLLOUT;
+                    _event.events = Masks::read_write;
                 }
             } // while (read_bytes)
         }
@@ -115,21 +121,39 @@ void Connection::DoRead() {
         }
     }
     catch (std::runtime_error &ex) {
-
+        _logger->error("Failed to process connection on descriptor {}: {}", client_socket, ex.what());
     }
 }
 
 // See Connection.h
 void Connection::DoWrite() {
-    while (!results_to_write.empty()) {
-        auto result = results_to_write.back();
-        if (send(_socket, result.data(), result.size(), 0) <= 0) {
-            throw std::runtime_error("Failed to send response");
-        }
-        results_to_write.pop_back();
+    _logger->info("Connection writing");
+    struct iovec iovecs[results_to_write.size()];
+    for (int i = 0; i < results_to_write.size(); i++) {
+        iovecs[i].iov_len = results_to_write[i].size();
+        iovecs[i].iov_base = &(results_to_write[i][0]);
+    }
+    iovecs[0].iov_base = static_cast<char*>(iovecs[0].iov_base) + _position;
+    iovecs[0].iov_len -= _position;
+
+    int written;
+    if ((written = writev(_socket, iovecs, _answers.size())) <= 0) {
+        _logger->error("Failed to send response");
+    }
+    _position += written;
+
+    int i = 0;
+    for (; i < _answers.size() && (_position - iovecs[i].iov_len) >= 0; i++) {
+        _position -= iovecs[i].iov_len;
     }
 
-    _event.events = EPOLLIN;
+    results_to_write.erase(results_to_write.begin(), results_to_write.begin() + i);
+    if (results_to_write.empty()) {
+        _event.events = Masks::read;
+    }
+    else {
+        _event.events = Masks::read_write;
+    }
 }
 
 } // namespace STnonblock
