@@ -7,6 +7,7 @@
 #include <afina/logging/Service.h>
 
 #include "protocol/Parser.h"
+#include "ClientBuffer.h"
 
 #include <sys/epoll.h>
 
@@ -23,8 +24,8 @@ public:
     };
 
     struct Masks {
-        static const int read = EPOLLIN | EPOLLRDHUP | EPOLLERR;
-        static const int read_write = EPOLLIN | EPOLLRDHUP | EPOLLERR | EPOLLOUT;
+        static const int read = ((EPOLLIN | EPOLLRDHUP) | EPOLLERR);
+        static const int read_write = (((EPOLLIN | EPOLLRDHUP) | EPOLLERR) | EPOLLOUT);
     };
 
     Connection(int s, std::shared_ptr<Afina::Storage> ps, std::shared_ptr<Logging::Service> pl) :
@@ -33,6 +34,7 @@ public:
                 pLogging(pl) {
         std::memset(&_event, 0, sizeof(struct epoll_event));
         _event.data.ptr = this;
+        client_buffer = ClientBuffer();
     }
 
     inline bool isAlive() const {
@@ -54,18 +56,19 @@ private:
 
     friend class ServerImpl;
 
-    int _socket;
+    std::atomic<int> _socket;
     struct epoll_event _event;
-    State state = State::Embryo;
-    std::size_t arg_remains;
+    std::atomic<State> state = State::Embryo;
+    std::atomic<std::size_t> arg_remains;
     Protocol::Parser parser;
-    std::string argument_for_command;
+    std::atomic<std::string> argument_for_command;
     std::unique_ptr<Execute::Command> command_to_execute;
     std::shared_ptr<Afina::Storage> _storage;
     std::shared_ptr<Logging::Service> pLogging;
     std::shared_ptr<spdlog::logger> _logger;
     std::vector<std::string> results_to_write;
-    int _position = 0;
+    ClientBuffer client_buffer;
+    int write_position = 0;
 };
 
 } // namespace MTnonblock

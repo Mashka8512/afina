@@ -98,7 +98,7 @@ void ServerImpl::Start(uint16_t port, uint32_t n_acceptors, uint32_t n_workers) 
 
     _workers.reserve(n_workers);
     for (int i = 0; i < n_workers; i++) {
-        _workers.emplace_back(pStorage, pLogging, std::make_shared<std::mutex>(epoll_workers_lock));
+        _workers.emplace_back(pStorage, pLogging);
         _workers.back().Start(_data_epoll_fd);
     }
 
@@ -204,7 +204,6 @@ void ServerImpl::OnRun() {
                 pc->Start();
                 if (pc->isAlive()) {
                     pc->_event.events |= EPOLLONESHOT;
-                    std::unique_lock<std::mutex> lock(epoll_workers_lock);
                     if (epoll_ctl(_data_epoll_fd, EPOLL_CTL_MOD, pc->_socket, &pc->_event)) {
                         pc->OnError();
                         delete pc;

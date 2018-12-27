@@ -7,6 +7,7 @@
 #include <afina/logging/Service.h>
 
 #include "protocol/Parser.h"
+#include "ClientBuffer.h"
 
 #include <sys/epoll.h>
 
@@ -23,8 +24,8 @@ public:
     };
 
     struct Masks {
-        static const int read = EPOLLIN | EPOLLRDHUP | EPOLLERR;
-        static const int read_write = EPOLLIN | EPOLLRDHUP | EPOLLERR | EPOLLOUT;
+        static const int read = ((EPOLLIN | EPOLLRDHUP) | EPOLLERR);
+        static const int read_write = (((EPOLLIN | EPOLLRDHUP) | EPOLLERR) | EPOLLOUT);
     };
 
     Connection(int s, std::shared_ptr<Afina::Storage> ps, std::shared_ptr<Logging::Service> pl) :
@@ -33,6 +34,7 @@ public:
                 pLogging(pl) {
         std::memset(&_event, 0, sizeof(struct epoll_event));
         _event.data.ptr = this;
+        client_buffer = ClientBuffer();
     }
 
     inline bool isAlive() const {
@@ -65,7 +67,8 @@ private:
     std::shared_ptr<Logging::Service> pLogging;
     std::shared_ptr<spdlog::logger> _logger;
     std::vector<std::string> results_to_write;
-    int _position = 0;
+    ClientBuffer client_buffer;
+    int write_position = 0;
 };
 
 } // namespace STnonblock

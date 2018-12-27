@@ -27,7 +27,7 @@ namespace MTnonblock {
  */
 class Worker {
 public:
-    Worker(std::shared_ptr<Afina::Storage> ps, std::shared_ptr<Afina::Logging::Service> pl, std::shared_ptr<std::mutex> epoll_lock);
+    Worker(std::shared_ptr<Afina::Storage> ps, std::shared_ptr<Afina::Logging::Service> pl);
     ~Worker();
 
     Worker(Worker &&);
@@ -80,7 +80,6 @@ private:
     std::thread _thread;
 
     // EPOLL descriptor using for events processing
-    std::shared_ptr<std::mutex> _epoll_fd_lock;
     int _epoll_fd;
 };
 

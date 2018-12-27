@@ -14,12 +14,15 @@
 #include <sys/socket.h>
 #include <sys/types.h>
 #include <unistd.h>
+#include <atomic>
 
 #include <spdlog/logger.h>
 
 #include <afina/Storage.h>
 #include <afina/execute/Command.h>
 #include <afina/logging/Service.h>
+
+#include "protocol/Parser.h"
 
 namespace Afina {
 namespace Network {
@@ -34,8 +37,9 @@ void Connection::Start() {
     argument_for_command.resize(0);
     parser.Reset();
     results_to_write.clear();
-    _position = 0;
+    write_position = 0;
     _events.event = Masks::read;
+    client_buffer.reset()
 }
 
 // See Connection.h
@@ -55,60 +59,48 @@ void Connection::OnClose() {
 // See Connection.h
 void Connection::DoRead() {
     _logger->info("Connection reading");
+    std::atomic_thread_fence(std::memory_order_acquire);
     try {
         int read_bytes = -1;
-        char client_buffer[4096];
-        while ((read_bytes = read(client_socket, client_buffer, sizeof(client_buffer))) > 0) {
-            // Single block of data read from the socket could trigger inside actions a multiple times,
-            // for example:
-            // - read#0: [<command1 start>]
-            // - read#1: [<command1 end> <argument> <command2> <argument for command 2> <command3> ... ]
-            while (read_bytes > 0) {
-                // There is no command yet
+        while ((read_bytes = read(client_socket, client_buffer.read_ptr(), client_buffer.read_size()) > 0) {
+            client_buffer.read(read_bytes)
+            while (client_buffer.parse_size() > 0) {
+                std::size_t parsed = 0;
                 if (!command_to_execute) {
-                    std::size_t parsed = 0;
-                    if (parser.Parse(client_buffer, read_bytes, parsed)) {
-                        // There is no command to be launched, continue to parse input stream
-                        // Here we are, current chunk finished some command, process it
+                    if (parser.Parse(client_buffer.parse_ptr(), client_buffer.parse_size(), parsed)) {
                         command_to_execute = parser.Build(arg_remains);
                         if (arg_remains > 0) {
                             arg_remains += 2;
                         }
                     }
-                    // Parsed might fails to consume any bytes from input stream. In real life that could happens,
-                    // for example, because we are working with UTF-16 chars and only 1 byte left in stream
                     if (parsed == 0) {
                         break;
                     } else {
-                        std::memmove(client_buffer, client_buffer + parsed, read_bytes - parsed);
-                        read_bytes -= parsed;
+                        client_buffer.parsed(parsed);
                     }
                 }
-                // There is command, but we still wait for argument to arrive...
                 if (command_to_execute && arg_remains > 0) {
-                // There is some parsed command, and now we are reading argument
-                    std::size_t to_read = std::min(arg_remains, std::size_t(read_bytes));
-                    argument_for_command.append(client_buffer, to_read);
-                    std::memmove(client_buffer, client_buffer + to_read, read_bytes - to_read);
+                    std::size_t to_read = std::min(arg_remains, std::size_t(client_buffer.parse_size()));
+                    argument_for_command.append(client_buffer.parse_ptr(), to_read);
+
                     arg_remains -= to_read;
-                    read_bytes -= to_read;
+                    client_buffer.parsed(to_read)
                 }
 
-                // There is command & argument - RUN!
                 if (command_to_execute && arg_remains == 0) {
                     std::string result_to_write;
                     command_to_execute->Execute(*pStorage, argument_for_command, result_to_write);
                     result_to_write += "\r\n";
-                    // Save results for better time
                     results_to_write.push_back(result_to_write);
-                    // Prepare for the next command
+
                     command_to_execute.reset();
                     argument_for_command.resize(0);
                     parser.Reset();
 
                     _event.events = Masks::read_write;
                 }
-            } // while (read_bytes)
+            }
+            client_buffer.conditional_reset()
         }
         if (read_bytes > 0) {
             throw std::runtime_error(std::string(strerror(errno)));
@@ -117,26 +109,30 @@ void Connection::DoRead() {
     catch (std::runtime_error &ex) {
         _logger->error("Failed to process connection on descriptor {}: {}", client_socket, ex.what());
     }
+    std::atomic_thread_fence(std::memory_order_release);
 }
 
 // See Connection.h
 void Connection::DoWrite() {
     _logger->info("Connection writing");
+    std::atomic_thread_fence(std::memory_order_acquire);
     struct iovec iovecs[results_to_write.size()];
     for (int i = 0; i < results_to_write.size(); i++) {
         iovecs[i].iov_len = results_to_write[i].size();
         iovecs[i].iov_base = &(results_to_write[i][0]);
     }
-    iovecs[0].iov_base = static_cast<char*>(iovecs[0].iov_base) + _position;
-    iovecs[0].iov_len -= _position;
+    iovecs[0].iov_base = static_cast<char*>(iovecs[0].iov_base) + write_position;
+    iovecs[0].iov_len -= write_position;
+
     int written;
     if ((written = writev(_socket, iovecs, _answers.size())) <= 0) {
         _logger->error("Failed to send response");
     }
-    _position += written;
+    write_position += written;
+
     int i = 0;
-    for (; i < _answers.size() && (_position - iovecs[i].iov_len) >= 0; i++) {
-        _position -= iovecs[i].iov_len;
+    for (; i < results_to_write.size() && (write_position - iovecs[i].iov_len) >= 0; i++) {
+        write_position -= iovecs[i].iov_len;
     }
 
     results_to_write.erase(results_to_write.begin(), results_to_write.begin() + i);
@@ -146,6 +142,7 @@ void Connection::DoWrite() {
     else {
         _event.events = Masks::read_write;
     }
+    std::atomic_thread_fence(std::memory_order_release);
 }
 
 } // namespace MTnonblock

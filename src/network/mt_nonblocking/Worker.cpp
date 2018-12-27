@@ -109,19 +109,33 @@ void Worker::OnRun() {
             // Rearm connection
             if (pconn->isAlive()) {
                 pconn->_event.events |= EPOLLONESHOT;
-                std::unique_lock<std::mutex> lock(*_epoll_fd_lock);
                 if (epoll_ctl(_epoll_fd, EPOLL_CTL_MOD, pconn->_socket, &pconn->_event)) {
+                    close(pconn->_socket);
                     pconn->OnError();
-                    delete pconn;
+                    if (epoll_ctl(_epoll_fd, EPOLL_CTL_DEL, pconn->_socket, &pconn->_event)) {
+                        std::cerr << "Failed to delete connection!" << std::endl;
+                        close(pconn->_socket);
+                        pconn->onClose();
+                    }
+                    else {
+                        close(pconn->_socket);
+                        pconn->onClose();
+                        delete pconn;
+                    }
                 }
             }
             // Or delete closed one
             else {
-                std::unique_lock<std::mutex> lock(*_epoll_fd_lock);
                 if (epoll_ctl(_epoll_fd, EPOLL_CTL_DEL, pconn->_socket, &pconn->_event)) {
                     std::cerr << "Failed to delete connection!" << std::endl;
+                    close(pconn->_socket);
+                    pconn->onClose();
                 }
-                delete pconn;
+                else {
+                    close(pconn->_socket);
+                    pconn->onClose();
+                    delete pconn;
+                }
             }
         }
         // TODO: Select timeout...
