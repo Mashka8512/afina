@@ -138,7 +138,7 @@ void ServerImpl::OnRun() {
                 continue;
             }
 
-            // That is some connection!
+            // That is some connection!3
             Connection *pc = static_cast<Connection *>(current_event.data.ptr);
 
             auto old_mask = pc->_event.events;
@@ -221,6 +221,7 @@ void ServerImpl::OnNewConnection(int epoll_descr) {
         if (pc->isAlive()) {
             if (epoll_ctl(epoll_descr, EPOLL_CTL_ADD, pc->_socket, &pc->_event)) {
                 pc->OnError();
+                close(pc->_socket);
                 delete pc;
             }
         }

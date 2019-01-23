@@ -5,6 +5,7 @@
 #include <iostream>
 #include <memory>
 #include <stdexcept>
+#include <sys/uio.h>
 
 #include <arpa/inet.h>
 #include <netdb.h>
@@ -38,8 +39,8 @@ void Connection::Start() {
     parser.Reset();
     results_to_write.clear();
     write_position = 0;
-    _events.event = Masks::read;
-    client_buffer.reset()
+    _event.events = Masks::read;
+    client_buffer.reset();
 }
 
 // See Connection.h
@@ -62,8 +63,8 @@ void Connection::DoRead() {
     std::atomic_thread_fence(std::memory_order_acquire);
     try {
         int read_bytes = -1;
-        while ((read_bytes = read(client_socket, client_buffer.read_ptr(), client_buffer.read_size()) > 0) {
-            client_buffer.read(read_bytes)
+        while (read_bytes = read(_socket, client_buffer.read_ptr(), client_buffer.read_size()) > 0) {
+            client_buffer.read(read_bytes);
             while (client_buffer.parse_size() > 0) {
                 std::size_t parsed = 0;
                 if (!command_to_execute) {
@@ -84,7 +85,7 @@ void Connection::DoRead() {
                     argument_for_command.append(client_buffer.parse_ptr(), to_read);
 
                     arg_remains -= to_read;
-                    client_buffer.parsed(to_read)
+                    client_buffer.parsed(to_read);
                 }
 
                 if (command_to_execute && arg_remains == 0) {
@@ -100,14 +101,14 @@ void Connection::DoRead() {
                     _event.events = Masks::read_write;
                 }
             }
-            client_buffer.conditional_reset()
+            client_buffer.conditional_reset();
         }
         if (read_bytes > 0) {
             throw std::runtime_error(std::string(strerror(errno)));
         }
     }
     catch (std::runtime_error &ex) {
-        _logger->error("Failed to process connection on descriptor {}: {}", client_socket, ex.what());
+        _logger->error("Failed to process connection on descriptor {}: {}", _socket, ex.what());
     }
     std::atomic_thread_fence(std::memory_order_release);
 }
@@ -125,7 +126,7 @@ void Connection::DoWrite() {
     iovecs[0].iov_len -= write_position;
 
     int written;
-    if ((written = writev(_socket, iovecs, _answers.size())) <= 0) {
+    if ((written = writev(_socket, iovecs, client_buffer.size())) <= 0) {
         _logger->error("Failed to send response");
     }
     write_position += written;

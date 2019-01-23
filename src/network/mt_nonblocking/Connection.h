@@ -8,6 +8,7 @@
 
 #include "protocol/Parser.h"
 #include "ClientBuffer.h"
+#include "Worker.h"
 
 #include <sys/epoll.h>
 
@@ -55,13 +56,14 @@ protected:
 private:
 
     friend class ServerImpl;
-
+    friend class Worker;
+    
     std::atomic<int> _socket;
     struct epoll_event _event;
-    std::atomic<State> state = State::Embryo;
-    std::atomic<std::size_t> arg_remains;
+    State state = State::Embryo;
+    std::size_t arg_remains;
     Protocol::Parser parser;
-    std::atomic<std::string> argument_for_command;
+    std::string argument_for_command;
     std::unique_ptr<Execute::Command> command_to_execute;
     std::shared_ptr<Afina::Storage> _storage;
     std::shared_ptr<Logging::Service> pLogging;

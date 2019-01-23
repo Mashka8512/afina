@@ -34,7 +34,7 @@ public:
                 pLogging(pl) {
         std::memset(&_event, 0, sizeof(struct epoll_event));
         _event.data.ptr = this;
-        client_buffer = ClientBuffer();
+        client_buffer.reset();
     }
 
     inline bool isAlive() const {
@@ -67,7 +67,7 @@ private:
     std::shared_ptr<Logging::Service> pLogging;
     std::shared_ptr<spdlog::logger> _logger;
     std::vector<std::string> results_to_write;
-    ClientBuffer client_buffer;
+    STnonblock::ClientBuffer client_buffer;
     int write_position = 0;
 };
 

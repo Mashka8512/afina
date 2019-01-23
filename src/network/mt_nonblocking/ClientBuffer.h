@@ -5,7 +5,7 @@
 
 namespace Afina {
 namespace Network {
-namespace STnonblock {
+namespace MTnonblock {
 
 class ClientBuffer {
 public:

@@ -42,22 +42,22 @@ private:
     /**
      * Where coroutines stack begins
      */
-    char *StackBottom;
+    char* StackBottom;
 
     /**const int&
      * Current coroutine
      */
-    context *cur_routine;
+    context* cur_routine;
 
     /**
      * List of routines ready to be scheduled. Note that suspended routine ends up here as well
      */
-    context *alive;
+    context* alive;
 
     /**
      * Context to be returned finally
      */
-    context *idle_ctx;
+    context* idle_ctx;
 
 protected:
     /**
