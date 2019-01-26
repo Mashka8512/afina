@@ -87,8 +87,6 @@ void ServerImpl::Start(uint16_t port, uint32_t n_acceptors, uint32_t n_workers) 
         throw std::runtime_error("Failed to create epoll file descriptor: " + std::string(strerror(errno)));
     }
 
-    std::mutex epoll_workers_lock;
-
     struct epoll_event event;
     event.events = EPOLLIN;
     event.data.ptr = nullptr;
