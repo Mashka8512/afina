@@ -52,7 +52,7 @@ void ClientBuffer::reset() {
 
 void ClientBuffer::conditional_reset() {
     if (parse_size() + read_size() < minsize) {
-        auto tmp_buffer = char[_size];
+        char tmp_buffer[_size];
         auto tmp_size = parse_size();
         std::memcpy(tmp_buffer, parse_ptr(), tmp_size);
         reset();
