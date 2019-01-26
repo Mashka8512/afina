@@ -33,6 +33,7 @@ namespace MTnonblock {
 void Connection::Start() {
     _logger = pLogging->select("network.connection");
     _logger->info("Connection starts");
+    std::unique_lock<std::mutex> lc(lock);
     state = State::Alive;
     command_to_execute.reset();
     argument_for_command.resize(0);
@@ -46,6 +47,7 @@ void Connection::Start() {
 // See Connection.h
 void Connection::OnError() {
     _logger->info("Connection error");
+    std::unique_lock<std::mutex> lc(lock);
     this->state = State::Dead;
     results_to_write.clear();
 }
@@ -53,6 +55,7 @@ void Connection::OnError() {
 // See Connection.h
 void Connection::OnClose() {
     _logger->info("Connection closing");
+    std::unique_lock<std::mutex> lc(lock);
     this->state = State::Dead;
     results_to_write.clear();
 }
@@ -60,7 +63,7 @@ void Connection::OnClose() {
 // See Connection.h
 void Connection::DoRead() {
     _logger->info("Connection reading");
-    std::atomic_thread_fence(std::memory_order_acquire);
+    std::unique_lock<std::mutex> lc(lock);
     try {
         int read_bytes = -1;
         while (read_bytes = read(_socket, client_buffer.read_ptr(), client_buffer.read_size()) > 0) {
@@ -110,13 +113,12 @@ void Connection::DoRead() {
     catch (std::runtime_error &ex) {
         _logger->error("Failed to process connection on descriptor {}: {}", _socket, ex.what());
     }
-    std::atomic_thread_fence(std::memory_order_release);
 }
 
 // See Connection.h
 void Connection::DoWrite() {
     _logger->info("Connection writing");
-    std::atomic_thread_fence(std::memory_order_acquire);
+    std::unique_lock<std::mutex> lc(lock);
     struct iovec iovecs[results_to_write.size()];
     for (int i = 0; i < results_to_write.size(); i++) {
         iovecs[i].iov_len = results_to_write[i].size();
@@ -143,7 +145,6 @@ void Connection::DoWrite() {
     else {
         _event.events = Masks::read_write;
     }
-    std::atomic_thread_fence(std::memory_order_release);
 }
 
 } // namespace MTnonblock

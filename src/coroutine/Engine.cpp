@@ -24,7 +24,7 @@ void Engine::Restore(context &ctx) {
         Restore(ctx);
     }
     std::memcpy(ctx.Low, std::get<0>(ctx.Stack), std::get<1>(ctx.Stack));
-    cur_routine = ctx;
+    cur_routine = &ctx;
     longjmp(ctx.Environment, 1);
 }
 
@@ -34,15 +34,15 @@ void Engine::yield() {
         routine = alive->next;
     }
     if (routine != nullptr) {
-        sched(routine);
+        sched(static_cast<void*>(routine));
     }
 }
 
 void Engine::sched(void *routine_) {
-    if (setjmp(cur_routine.Environment) == 0) {
-        Store(cur_routine);
-        auto ctx = std::static_cast<context>(routine_);
-        Restore(ctx);
+    if (setjmp(cur_routine->Environment) == 0) {
+        Store(*cur_routine);
+        auto ctx = std::static_cast<context*>(routine_);
+        Restore(*ctx);
     }
 }
 

@@ -57,8 +57,8 @@ private:
 
     friend class ServerImpl;
     friend class Worker;
-    
-    std::atomic<int> _socket;
+
+    int _socket;
     struct epoll_event _event;
     State state = State::Embryo;
     std::size_t arg_remains;
@@ -70,7 +70,8 @@ private:
     std::shared_ptr<spdlog::logger> _logger;
     std::vector<std::string> results_to_write;
     ClientBuffer client_buffer;
-    int write_position = 0;
+    std::size_t write_position = 0;
+    std::mutex lock;
 };
 
 } // namespace MTnonblock
