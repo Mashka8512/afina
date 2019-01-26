@@ -31,6 +31,8 @@
 #include <afina/execute/Command.h>
 #include <afina/logging/Service.h>
 
+#include "protocol/Parser.h"
+
 namespace spdlog {
 class logger;
 }
