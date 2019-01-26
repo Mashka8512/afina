@@ -119,6 +119,11 @@ void ServerImpl::Stop() {
     if (eventfd_write(_event_fd, 1)) {
         throw std::runtime_error("Failed to wakeup workers");
     }
+
+    // closing sockets
+    for(std::vector<T>::iterator it = v.begin(); it != v.end(); ++it) {
+        close(*it);
+    }
 }
 
 // See Server.h
@@ -197,6 +202,7 @@ void ServerImpl::OnRun() {
                 if (pc == nullptr) {
                     throw std::runtime_error("Failed to allocate connection");
                 }
+                sockets.push_back(infd);
 
                 // Register connection in worker's epoll
                 pc->Start();

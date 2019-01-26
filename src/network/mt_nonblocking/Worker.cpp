@@ -22,13 +22,11 @@ namespace MTnonblock {
 
 // See Worker.h
 Worker::Worker(std::shared_ptr<Afina::Storage> ps, std::shared_ptr<Afina::Logging::Service> pl)
-    : _pStorage(ps), _pLogging(pl), isRunning(false), _epoll_fd(-1) {
-    // TODO: implementation here ?
-}
+    : _pStorage(ps), _pLogging(pl), isRunning(false), _epoll_fd(-1) {}
 
 // See Worker.h
 Worker::~Worker() {
-    // TODO: implementation here ?
+    isRunning = false;
 }
 
 // See Worker.h
@@ -57,7 +55,9 @@ void Worker::Start(int epoll_fd) {
 }
 
 // See Worker.h
-void Worker::Stop() { isRunning = false; }
+void Worker::Stop() {
+    isRunning = false;
+}
 
 // See Worker.h
 void Worker::Join() {
