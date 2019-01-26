@@ -10,9 +10,7 @@ ClientBuffer::ClientBuffer() {
     std::memset(buffer, 0, _size);
 }
 
-ClientBuffer::~ClientBuffer() {
-    delete buffer;
-}
+ClientBuffer::~ClientBuffer() {}
 
 char* ClientBuffer::ptr() {
     return buffer;
@@ -46,13 +44,13 @@ void ClientBuffer::parsed(std::size_t amount) {
     parsed_offset += amount;
 }
 
-void reset() {
+void ClientBuffer::reset() {
     parsed_offset = 0;
     read_offset = 0;
     std::memset(buffer, 0, _size);
 }
 
-void conditional_reset() {
+void ClientBuffer::conditional_reset() {
     if (parse_size() + read_size() < minsize) {
         auto tmp_buffer = char[_size];
         auto tmp_size = parse_size();
