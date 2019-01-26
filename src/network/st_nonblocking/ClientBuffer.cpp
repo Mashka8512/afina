@@ -2,6 +2,10 @@
 
 #include <cstring>
 
+namespace Afina {
+namespace Network {
+namespace STnonblock {
+
 ClientBuffer::ClientBuffer() {
     std::memset(buffer, 0, _size);
 }
@@ -57,4 +61,8 @@ void conditional_reset() {
         std::memcpy(ptr(), tmp_buffer, tmp_size);
         read_offset = tmp_size;
     }
+}
+
+}
+}
 }
