@@ -203,7 +203,7 @@ void ServerImpl::OnRun() {
                 if (pc == nullptr) {
                     throw std::runtime_error("Failed to allocate connection");
                 }
-                sockets.push_back(infd);
+                _sockets.push_back(infd);
 
                 // Register connection in worker's epoll
                 pc->Start();
