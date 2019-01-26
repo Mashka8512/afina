@@ -9,6 +9,28 @@
 #include <mutex>
 #include <condition_variable>
 
+#include <cassert>
+#include <cstring>
+#include <iostream>
+#include <memory>
+#include <stdexcept>
+#include <algorithm>
+
+#include <arpa/inet.h>
+#include <netdb.h>
+#include <netinet/in.h>
+#include <pthread.h>
+#include <signal.h>
+#include <sys/socket.h>
+#include <sys/types.h>
+#include <unistd.h>
+
+#include <spdlog/logger.h>
+
+#include <afina/Storage.h>
+#include <afina/execute/Command.h>
+#include <afina/logging/Service.h>
+
 namespace spdlog {
 class logger;
 }
@@ -37,7 +59,7 @@ public:
     void Stop();
 
     void Detach();
-    
+
     int id() {
         return _worker_id;
     }
@@ -56,11 +78,11 @@ private:
     std::thread _thread;
 
     int _worker_id;
-    
+
     int _client_socket;
-    
+
     struct sockaddr _client_addr;
-    
+
     socklen_t _client_addr_len;
 };
 
