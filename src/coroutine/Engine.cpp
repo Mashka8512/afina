@@ -3,6 +3,7 @@
 #include <setjmp.h>
 #include <stdio.h>
 #include <string.h>
+#include <cstring.h>
 
 namespace Afina {
 namespace Coroutine {
