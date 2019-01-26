@@ -3,7 +3,7 @@
 #include <setjmp.h>
 #include <stdio.h>
 #include <string.h>
-#include <cstring.h>
+#include <cstring>
 
 namespace Afina {
 namespace Coroutine {
@@ -21,7 +21,7 @@ void Engine::Store(context &ctx) {
 
 void Engine::Restore(context &ctx) {
     char now;
-    while ((ctx.Low < &now < ctx.Hight) || (ctx.Low > &now > ctx.Hight)) {
+    while (((ctx.Low < &now) && (&now < ctx.Hight)) || ((ctx.Low > &now) && (&now > ctx.Hight))) {
         Restore(ctx);
     }
     std::memcpy(ctx.Low, std::get<0>(ctx.Stack), std::get<1>(ctx.Stack));
