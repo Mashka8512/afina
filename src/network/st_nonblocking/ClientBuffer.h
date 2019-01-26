@@ -23,7 +23,7 @@ public:
     void conditional_reset();
 
 private:
-    std::size_t _size = 4096;
+    static std::size_t _size = 4096;
     char buffer[_size];
     std::size_t read_offset = 0;
     std::size_t parsed_offset = 0;
