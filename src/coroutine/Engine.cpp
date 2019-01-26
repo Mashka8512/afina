@@ -42,7 +42,7 @@ void Engine::yield() {
 void Engine::sched(void *routine_) {
     if (setjmp(cur_routine->Environment) == 0) {
         Store(*cur_routine);
-        auto ctx = std::static_cast<context*>(routine_);
+        context* ctx = std::static_cast<context*>(routine_);
         Restore(*ctx);
     }
 }
