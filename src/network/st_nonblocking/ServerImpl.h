@@ -56,6 +56,8 @@ private:
 
     // IO thread
     std::thread _work_thread;
+
+    std::vector<int> _sockets;
 };
 
 } // namespace STnonblock
