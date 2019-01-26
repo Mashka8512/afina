@@ -93,7 +93,7 @@ void Connection::DoRead() {
 
                 if (command_to_execute && arg_remains == 0) {
                     std::string result_to_write;
-                    command_to_execute->Execute(*pStorage, argument_for_command, result_to_write);
+                    command_to_execute->Execute(*_storage, argument_for_command, result_to_write);
                     result_to_write += "\r\n";
                     results_to_write.push_back(result_to_write);
 
