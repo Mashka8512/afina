@@ -91,6 +91,8 @@ void Connection::DoRead() {
                     command_to_execute->Execute(*_storage, argument_for_command, result_to_write);
                     result_to_write += "\r\n";
                     results_to_write.push_back(result_to_write);
+                    _logger->debug("Pushed back");
+                    -logger->debug(result_to_write);
 
                     command_to_execute.reset();
                     argument_for_command.resize(0);
