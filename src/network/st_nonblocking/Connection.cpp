@@ -83,7 +83,7 @@ void Connection::DoRead() {
                     argument_for_command.append(client_buffer.parse_ptr(), to_read);
 
                     arg_remains -= to_read;
-                    client_buffer.parsed(to_read)
+                    client_buffer.parsed(to_read);
                 }
 
                 if (command_to_execute && arg_remains == 0) {
@@ -106,7 +106,7 @@ void Connection::DoRead() {
         }
     }
     catch (std::runtime_error &ex) {
-        _logger->error("Failed to process connection on descriptor {}: {}", client_socket, ex.what());
+        _logger->error("Failed to process connection on descriptor {}: {}", _socket, ex.what());
     }
 }
 
