@@ -64,7 +64,7 @@ private:
     // threads serving read/write requests
     std::vector<Worker> _workers;
 
-    std::vector<int> sockets;
+    std::vector<int> _sockets;
 };
 
 } // namespace MTnonblock

@@ -121,7 +121,7 @@ void ServerImpl::Stop() {
     }
 
     // closing sockets
-    for(std::vector<T>::iterator it = v.begin(); it != v.end(); ++it) {
+    for(std::vector<int>::iterator it = _sockets.begin(); it != _sockets.end(); ++it) {
         close(*it);
     }
 }
