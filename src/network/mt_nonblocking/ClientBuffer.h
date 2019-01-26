@@ -27,7 +27,7 @@ private:
     char buffer[_size];
     std::size_t read_offset = 0;
     std::size_t parsed_offset = 0;
-    const std::size_t minsize = 100;
+    static const std::size_t minsize = 100;
 };
 
 } // namespace MTnonblock
