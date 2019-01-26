@@ -27,19 +27,19 @@ void Worker::Start(int worker_id, int client_socket, struct sockaddr& client_add
         _client_socket = client_socket;
         _client_addr = client_addr;
         _client_addr_len = sizeof(_client_addr);
-        
+
         _thread = std::thread(&Worker::OnRun, this);
     }
 }
 
 void Worker::Stop() {
-    auto it = std::find_if(_workers.begin(), _workers.end(), [&](std::unique_ptr<Worker>& obj){return obj->id() == _worker_id;});
+    /*auto it = std::find_if(_workers.begin(), _workers.end(), [&](std::unique_ptr<Worker>& obj){return obj->id() == _worker_id;});
     assert(it != _workers.end()); // if not, we are at the *woops* situation
     { // erasing myself
         std::unique_lock<std::mutex> lc(_workers_mutex);
         _workers.erase(it);
     }
-    _serv_lock.notify_all();
+    _serv_lock.notify_all();*/
     isRunning.exchange(false);
 }
 
@@ -126,15 +126,15 @@ void Worker::OnRun() {
                 throw std::runtime_error(std::string(strerror(errno)));
             }
         } catch (std::runtime_error &ex) {
-            
+
         }
-        
+
         // We are done with this connection
         close(_client_socket);
     }
-    
+
     Stop();
-    
+
 }
 } // namespace MTblocking
 } // namespace Network
