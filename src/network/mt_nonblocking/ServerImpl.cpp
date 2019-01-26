@@ -206,6 +206,7 @@ void ServerImpl::OnRun() {
                     pc->_event.events |= EPOLLONESHOT;
                     if (epoll_ctl(_data_epoll_fd, EPOLL_CTL_MOD, pc->_socket, &pc->_event)) {
                         pc->OnError();
+                        close(pc->_socket);
                         delete pc;
                     }
                 }
