@@ -110,6 +110,12 @@ void ServerImpl::Start(uint16_t port, uint32_t n_acceptors, uint32_t n_workers) 
 // See Server.h
 void ServerImpl::Stop() {
     _logger->warn("Stop network service");
+
+    // closing sockets
+    for(std::vector<int>::iterator it = _sockets.begin(); it != _sockets.end(); ++it) {
+        close(*it);
+    }
+
     // Said workers to stop
     for (auto &w : _workers) {
         w.Stop();
@@ -118,11 +124,6 @@ void ServerImpl::Stop() {
     // Wakeup threads that are sleep on epoll_wait
     if (eventfd_write(_event_fd, 1)) {
         throw std::runtime_error("Failed to wakeup workers");
-    }
-
-    // closing sockets
-    for(std::vector<int>::iterator it = _sockets.begin(); it != _sockets.end(); ++it) {
-        close(*it);
     }
 }
 
