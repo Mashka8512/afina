@@ -2,9 +2,7 @@
 
 #include <cstring>
 
-ClientBuffer::ClientBuffer(std::size_t size) :
-    _size(size) {
-    buffer = new char[_size];
+ClientBuffer::ClientBuffer() {
     std::memset(buffer, 0, _size);
 }
 

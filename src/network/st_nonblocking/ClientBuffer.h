@@ -9,7 +9,7 @@ namespace STnonblock {
 
 class ClientBuffer {
 public:
-    ClientBuffer(std::size_t size=4096);
+    ClientBuffer();
     ~ClientBuffer();
     char* ptr();
     char* read_ptr();
@@ -23,7 +23,7 @@ public:
     void conditional_reset();
 
 private:
-    static std::size_t _size;
+    static const std::size_t _size = 4096;
     char buffer[_size];
     std::size_t read_offset = 0;
     std::size_t parsed_offset = 0;
