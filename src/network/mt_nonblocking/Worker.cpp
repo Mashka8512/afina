@@ -13,7 +13,6 @@
 
 #include <afina/logging/Service.h>
 
-#include "Connection.h"
 #include "Utils.h"
 
 namespace Afina {
@@ -45,10 +44,9 @@ Worker &Worker::operator=(Worker &&other) {
 }
 
 // See Worker.h
-void Worker::Start(int epoll_fd, std::set<Afina::Network::MTnonblock::Connection*>* cns) {
+void Worker::Start(int epoll_fd) {
     if (isRunning.exchange(true) == false) {
         assert(_epoll_fd == -1);
-        _connections = cns;
         _epoll_fd = epoll_fd;
         _logger = _pLogging->select("network.worker");
         _thread = std::thread(&Worker::OnRun, this);
@@ -123,8 +121,6 @@ void Worker::OnRun() {
                     else {
                         close(pconn->_socket);
                         pconn->OnClose();
-                        _connections->erase(pconn);
-                        delete pconn;
                     }
                 }
             }
@@ -138,8 +134,6 @@ void Worker::OnRun() {
                 else {
                     close(pconn->_socket);
                     pconn->OnClose();
-                    _connections->erase(pconn);
-                    delete pconn;
                 }
             }
         }

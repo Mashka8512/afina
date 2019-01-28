@@ -97,7 +97,7 @@ void ServerImpl::Start(uint16_t port, uint32_t n_acceptors, uint32_t n_workers) 
     _workers.reserve(n_workers);
     for (int i = 0; i < n_workers; i++) {
         _workers.emplace_back(pStorage, pLogging);
-        _workers.back().Start(_data_epoll_fd, &_connections);
+        _workers.back().Start(_data_epoll_fd);
     }
 
     // Start acceptors
