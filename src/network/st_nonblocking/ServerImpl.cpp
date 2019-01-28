@@ -170,14 +170,13 @@ void ServerImpl::OnRun() {
 
                     close(pc->_socket);
                     pc->OnClose();
-
-                    _connections.erase(pc);
-
-                    delete pc;
                 }
                 else {
                     close(pc->_socket);
                     pc->OnClose();
+                    _connections.erase(pc);
+
+                    delete pc;
                 }
             } else if (pc->_event.events != old_mask) {
                 if (epoll_ctl(epoll_descr, EPOLL_CTL_MOD, pc->_socket, &pc->_event)) {
