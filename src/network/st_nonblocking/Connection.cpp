@@ -127,6 +127,7 @@ void Connection::DoWrite() {
     int written;
     if ((written = writev(_socket, iovecs, client_buffer.size())) <= 0) {
         _logger->error("Failed to send response");
+        _logger->info(written);
     }
     write_position += written;
 
