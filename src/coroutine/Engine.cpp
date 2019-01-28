@@ -31,7 +31,7 @@ void Engine::Restore(context &ctx) {
 
 void Engine::yield() {
     auto routine = alive;
-    while (routine == cur_routine) {
+    if (routine == cur_routine) {
         routine = alive->next;
     }
     if (routine != nullptr) {
