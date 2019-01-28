@@ -211,7 +211,7 @@ void ServerImpl::OnRun() {
                 pc->Start();
                 if (pc->isAlive()) {
                     pc->_event.events |= EPOLLONESHOT;
-                    auto ctlans = epoll_ctl(_data_epoll_fd, EPOLL_CTL_MOD, pc->_socket, &pc->_event);
+                    auto ctlans = epoll_ctl(_data_epoll_fd, EPOLL_CTL_ADD, pc->_socket, &pc->_event);
                     if (ctlans) {
                         std::cerr << "Could not ctl epoll (acceptor) : " << ctlans << std::endl;
                         pc->OnError();
