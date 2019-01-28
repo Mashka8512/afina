@@ -116,7 +116,6 @@ void Connection::DoRead() {
 void Connection::DoWrite() {
     _logger->info("Connection writing");
     struct iovec iovecs[results_to_write.size()];
-    _logger->info(results_to_write.size());
     for (int i = 0; i < results_to_write.size(); i++) {
         iovecs[i].iov_len = results_to_write[i].size();
         iovecs[i].iov_base = &(results_to_write[i][0]);
@@ -124,11 +123,9 @@ void Connection::DoWrite() {
     iovecs[0].iov_base = static_cast<char*>(iovecs[0].iov_base) + write_position;
     iovecs[0].iov_len -= write_position;
 
-    write(_socket, "lmao hello", 10);
     int written;
-    if ((written = writev(_socket, iovecs, client_buffer.size())) <= 0) {
+    if ((written = writev(_socket, iovecs, results_to_write.size())) <= 0) {
         _logger->error("Failed to send response");
-        _logger->info(written);
     }
     write_position += written;
 
