@@ -13,9 +13,9 @@ void Engine::Store(context &ctx) {
     ctx.Hight = &Higher;
     ctx.Low = this->StackBottom;
     if (ctx.Low > ctx.Hight) {
-        auto tmp = ctx.Hight
-        ctx.Hight = ctx.Low
-        ctx.Low = tmp
+        auto tmp = ctx.Hight;
+        ctx.Hight = ctx.Low;
+        ctx.Low = tmp;
     }
     std::size_t length = ctx.Hight - ctx.Low;
     char* stack = new char[length];
