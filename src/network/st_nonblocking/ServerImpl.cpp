@@ -87,14 +87,14 @@ void ServerImpl::Start(uint16_t port, uint32_t n_acceptors, uint32_t n_workers) 
 void ServerImpl::Stop() {
     _logger->warn("Stop network service");
 
-    // closing sockets
-    for(std::vector<int>::iterator it = _sockets.begin(); it != _sockets.end(); ++it) {
-        close(*it);
-    }
-
     // Wakeup threads that are sleep on epoll_wait
     if (eventfd_write(_event_fd, 1)) {
         throw std::runtime_error("Failed to wakeup workers");
+    }
+
+    for (auto pc : _connections) {
+        close(pc->_socket);
+        delete pc;
     }
 
     close(_server_socket);
@@ -171,6 +171,8 @@ void ServerImpl::OnRun() {
                     close(pc->_socket);
                     pc->OnClose();
 
+                    _connections.erase(pc);
+
                     delete pc;
                 }
                 else {
@@ -183,6 +185,8 @@ void ServerImpl::OnRun() {
 
                     close(pc->_socket);
                     pc->OnClose();
+
+                    _connections.erase(pc);
 
                     delete pc;
                 }
@@ -222,7 +226,7 @@ void ServerImpl::OnNewConnection(int epoll_descr) {
         if (pc == nullptr) {
             throw std::runtime_error("Failed to allocate connection");
         }
-        _sockets.push_back(infd);
+        _connections.insert(pc);
 
         // Register connection in worker's epoll
         pc->Start();
@@ -230,6 +234,7 @@ void ServerImpl::OnNewConnection(int epoll_descr) {
             if (epoll_ctl(epoll_descr, EPOLL_CTL_ADD, pc->_socket, &pc->_event)) {
                 pc->OnError();
                 close(pc->_socket);
+                _connections.erase(pc);
                 delete pc;
             }
         }

@@ -38,7 +38,7 @@ public:
      * socket. Once connection accepted it must be registered and being processed
      * on this thread
      */
-    void Start(int epoll_fd);
+    void Start(int epoll_fd, std::set<Connection*>* cns);
 
     /**
      * Signal background thread to stop. After that signal thread must stop to
@@ -63,6 +63,8 @@ protected:
 private:
     Worker(Worker &) = delete;
     Worker &operator=(Worker &) = delete;
+
+    std::set<Connection*>* _connections;
 
     // afina services
     std::shared_ptr<Afina::Storage> _pStorage;

@@ -45,9 +45,10 @@ Worker &Worker::operator=(Worker &&other) {
 }
 
 // See Worker.h
-void Worker::Start(int epoll_fd) {
+void Worker::Start(int epoll_fd, std::set<Connection*>* cns) {
     if (isRunning.exchange(true) == false) {
         assert(_epoll_fd == -1);
+        _connections = cns;
         _epoll_fd = epoll_fd;
         _logger = _pLogging->select("network.worker");
         _thread = std::thread(&Worker::OnRun, this);
@@ -122,6 +123,7 @@ void Worker::OnRun() {
                     else {
                         close(pconn->_socket);
                         pconn->OnClose();
+                        _connections->erase(pconn);
                         delete pconn;
                     }
                 }
@@ -136,11 +138,11 @@ void Worker::OnRun() {
                 else {
                     close(pconn->_socket);
                     pconn->OnClose();
+                    _connections->erase(pconn);
                     delete pconn;
                 }
             }
         }
-        // TODO: Select timeout...
     }
     _logger->warn("Worker stopped");
 }
