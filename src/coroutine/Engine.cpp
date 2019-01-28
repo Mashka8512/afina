@@ -12,7 +12,12 @@ void Engine::Store(context &ctx) {
     char Higher;
     ctx.Hight = &Higher;
     ctx.Low = this->StackBottom;
-    std::size_t length = abs(ctx.Hight - ctx.Low);
+    if (ctx.Low > ctx.Hight) {
+        auto tmp = ctx.Hight
+        ctx.Hight = ctx.Low
+        ctx.Low = tmp
+    }
+    std::size_t length = ctx.Hight - ctx.Low;
     char* stack = new char[length];
     std::memcpy(stack, ctx.Low, length);
     delete[] std::get<0>(ctx.Stack);
@@ -21,7 +26,7 @@ void Engine::Store(context &ctx) {
 
 void Engine::Restore(context &ctx) {
     char now;
-    while (((ctx.Low < &now) && (&now < ctx.Hight)) || ((ctx.Low > &now) && (&now > ctx.Hight))) {
+    while ((ctx.Low < &now) && (&now < ctx.Hight)) {
         Restore(ctx);
     }
     std::memcpy(ctx.Low, std::get<0>(ctx.Stack), std::get<1>(ctx.Stack));
