@@ -212,6 +212,7 @@ void ServerImpl::OnRun() {
                 if (pc->isAlive()) {
                     pc->_event.events |= EPOLLONESHOT;
                     if (epoll_ctl(_data_epoll_fd, EPOLL_CTL_MOD, pc->_socket, &pc->_event)) {
+                        std::cerr << "Could not ctl epoll (acceptor)" << std::endl;
                         pc->OnError();
                         close(pc->_socket);
                         delete pc;
