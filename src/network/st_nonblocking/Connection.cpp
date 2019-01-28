@@ -116,6 +116,7 @@ void Connection::DoRead() {
 void Connection::DoWrite() {
     _logger->info("Connection writing");
     struct iovec iovecs[results_to_write.size()];
+    _logger->info(results_to_write.size());
     for (int i = 0; i < results_to_write.size(); i++) {
         iovecs[i].iov_len = results_to_write[i].size();
         iovecs[i].iov_base = &(results_to_write[i][0]);
