@@ -14,6 +14,7 @@
 #include <afina/logging/Service.h>
 
 #include "Utils.h"
+#include "Connection.h"
 
 namespace Afina {
 namespace Network {
